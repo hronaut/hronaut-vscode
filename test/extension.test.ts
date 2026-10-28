@@ -29,7 +29,7 @@ const STORE_DESCRIPTION = 'Connects your coding agent to Hronaut — a visible d
   + 'Watch every step, pause and take over, keep logins between sessions. Requires the Hronaut app (free 10-day trial at hronaut.dev).'
 const TOKEN = 'b'.repeat(24) + '-_C7'.repeat(4)
 
-/** A checkout of the Hronaut app, whose port, profile folder, license and terms the extension follows. */
+/** A checkout of the Hronaut app, whose port, profile folder and terms the extension follows. */
 const APP = process.env.HRONAUT_APP_DIR ?? '../hronaut'
 
 async function appFile(path: string): Promise<string> {
@@ -54,6 +54,7 @@ async function appPorts(): Promise<{ DEFAULT_MCP_PORT: number; MIN_MCP_PORT: num
 
 interface ExtensionManifest {
   version: string
+  license: string
   description: string
   engines: { vscode: string }
   extensionKind: string[]
@@ -126,19 +127,21 @@ describe('the VS Code extension', () => {
     for (const file of [manifest.main, manifest.icon, ...manifest.files]) await expect(stat(file)).resolves.toBeTruthy()
   })
 
-  it('carries the app’s license and a changelog entry for its version', async () => {
+  it('is MIT-licensed, unlike the Hronaut app, and has a changelog entry for its version', async () => {
     const manifest = JSON.parse(await readFile('package.json', 'utf8')) as ExtensionManifest
-    expect(await readFile('LICENSE.md', 'utf8')).toBe(await appFile('LICENSE'))
+    expect(await readFile('LICENSE.md', 'utf8')).toMatch(/^MIT License\r?\n\r?\nCopyright \(c\) 2026 Hronaut\r?\n/)
+    expect(manifest.license).toBe('MIT')
     // The stores show the changelog, and the Publish workflow takes the release notes from it.
     expect(await readFile('CHANGELOG.md', 'utf8')).toMatch(new RegExp(`^## ${manifest.version.replaceAll('.', '\\.')}$`, 'm'))
   })
 
-  it('states Hronaut’s current terms on its store page', async () => {
+  it('states its own license and Hronaut’s current terms on its store page', async () => {
     const readme = await readFile('README.md', 'utf8')
     const { subscription } = JSON.parse(await appFile('docs/PUBLIC_FACTS.json')) as {
       subscription: { trialDays: number; monthlyPerNamedUser: number; annualPerNamedUser: number; annualReferenceTotal: number; annualSavingsPercent: number }
     }
-    expect(readme).toContain('source-available under the [Subscription and Trial License](LICENSE.md)')
+    expect(readme).toContain('open source under the [MIT License](LICENSE.md)')
+    expect(readme).toContain('source-available under the [Subscription and Trial License](https://github.com/hronaut/hronaut/blob/main/LICENSE)')
     expect(readme).toContain(`The ${subscription.trialDays}-day trial`)
     expect(readme).toContain(`$${subscription.monthlyPerNamedUser}/month or $${subscription.annualPerNamedUser}/year per named user `
       + `(${subscription.annualSavingsPercent}% off $${subscription.annualReferenceTotal})`)
