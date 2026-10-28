@@ -1,0 +1,191 @@
+name: Publish
+
+# Publishes the extension from main: tests and packages it, publishes the .vsix to the VS Code Marketplace and Open VSX,
+# then tags the commit v<version> and attaches the .vsix to a GitHub release. The Marketplace trusts this workflow
+# through the hronaut publisher's trusted publishing policy; Open VSX takes the OVSX_PAT token of the extension-stores
+# environment. With both stores unchecked, the run only packages the extension, from any branch.
+on:
+  workflow_dispatch:
+    inputs:
+      marketplace:
+        description: Publish to the VS Code Marketplace (main only)
+        type: boolean
+        default: true
+      open_vsx:
+        description: Publish to Open VSX (main only)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  package:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.package.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      # A version goes to the stores once; a changed extension needs a new one.
+      - name: Check the version is new
+        if: inputs.marketplace || inputs.open_vsx
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          released="$(git ls-remote origin "refs/tags/v$version" "refs/tags/v$version^{}" | tail -n 1 | cut -f 1)"
+          if [[ -n "$released" && "$released" != "$GITHUB_SHA" ]]; then
+            echo "Version $version was released from $released. Raise the version in package.json and add it to CHANGELOG.md." >&2
+            exit 1
+          fi
+
+      # vsce-sign's install script only downloads the signing tool, which packaging does not use.
+      - name: Install vsce
+        run: npm install --global --ignore-scripts @vscode/vsce@4.1.0
+
+      # The store pages show the README from the package, so its relative links point at this commit.
+      - name: Package the extension
+        id: package
+        env:
+          CONTENT_URL: https://github.com/${{ github.repository }}/blob/${{ github.sha }}
+          IMAGES_URL: https://github.com/${{ github.repository }}/raw/${{ github.sha }}
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          vsce package --no-dependencies --baseContentUrl "$CONTENT_URL" --baseImagesUrl "$IMAGES_URL" --out "hronaut-vscode-$version.vsix"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Upload the extension
+        uses: actions/upload-artifact@v7
+        with:
+          name: hronaut-vscode
+          path: hronaut-vscode-*.vsix
+          if-no-files-found: error
+
+  publish-marketplace:
+    needs: package
+    if: inputs.marketplace
+    runs-on: ubuntu-latest
+    environment: extension-stores
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check the branch
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "Only builds of main go to the VS Code Marketplace; this run is on $GITHUB_REF." >&2
+          exit 1
+
+      - name: Download the extension
+        uses: actions/download-artifact@v8
+        with:
+          name: hronaut-vscode
+
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Install vsce
+        run: npm install --global --ignore-scripts @vscode/vsce@4.1.0
+
+      # The Marketplace exchanges this job's GitHub token for a short-lived one under the publisher's policy.
+      - name: Publish to the VS Code Marketplace
+        env:
+          VERSION: ${{ needs.package.outputs.version }}
+        run: vsce publish --oidc --packagePath "hronaut-vscode-$VERSION.vsix" --skip-duplicate
+
+  publish-open-vsx:
+    needs: package
+    if: inputs.open_vsx
+    runs-on: ubuntu-latest
+    environment: extension-stores
+    steps:
+      - name: Check the branch
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "Only builds of main go to Open VSX; this run is on $GITHUB_REF." >&2
+          exit 1
+
+      - name: Download the extension
+        uses: actions/download-artifact@v8
+        with:
+          name: hronaut-vscode
+
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Install ovsx
+        run: npm install --global --ignore-scripts ovsx@1.3.0
+
+      # The first publish creates the namespace, which makes the token's account its owner.
+      - name: Publish to Open VSX
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+          VERSION: ${{ needs.package.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$OVSX_PAT" ]]; then
+            echo "Add the Open VSX access token as the OVSX_PAT secret of the extension-stores environment." >&2
+            exit 1
+          fi
+          vsix="hronaut-vscode-$VERSION.vsix"
+          namespace="$(unzip -p "$vsix" extension/package.json | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).publisher")"
+          if ! curl --silent --fail --output /dev/null "https://open-vsx.org/api/$namespace"; then
+            ovsx create-namespace "$namespace"
+          fi
+          ovsx publish --packagePath "$vsix" --skip-duplicate
+
+  release:
+    needs: [package, publish-marketplace, publish-open-vsx]
+    # Once every store this run publishes to has the version; a run that publishes nowhere releases nothing.
+    if: >-
+      !cancelled() && needs.package.result == 'success' && (inputs.marketplace || inputs.open_vsx)
+      && needs.publish-marketplace.result != 'failure' && needs.publish-open-vsx.result != 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Download the extension
+        uses: actions/download-artifact@v8
+        with:
+          name: hronaut-vscode
+          path: dist
+
+      # The release notes are the version's section of CHANGELOG.md.
+      - name: Release on GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.package.outputs.version }}
+        run: |
+          set -euo pipefail
+          if gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "v$VERSION is already released."
+            exit 0
+          fi
+          awk -v heading="## $VERSION" '$0 == heading { found = 1; next } found && /^## / { exit } found { print }' CHANGELOG.md > notes.md
+          gh release create "v$VERSION" "dist/hronaut-vscode-$VERSION.vsix" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Hronaut for VS Code $VERSION" --notes-file notes.md

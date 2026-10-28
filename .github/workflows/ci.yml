@@ -1,0 +1,59 @@
+name: CI
+
+# Tests and packages the extension. The tests also check it against the Hronaut app's main branch, so the Monday run
+# fails when the app changes its MCP port, profile folder, license or prices. The Publish workflow runs this first.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Check out the Hronaut app
+        uses: actions/checkout@v7
+        with:
+          repository: hronaut/hronaut
+          path: hronaut-app
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            LICENSE
+            package.json
+            electron-builder.yml
+            docs/PUBLIC_FACTS.json
+            src/shared/mcp-port.ts
+
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        env:
+          HRONAUT_APP_DIR: hronaut-app
+        run: npm test
+
+      # vsce-sign's install script only downloads the signing tool, which packaging does not use.
+      - name: Install vsce
+        run: npm install --global --ignore-scripts @vscode/vsce@4.1.0
+
+      # Packaging checks the manifest and files the stores take; the Publish workflow builds the package it publishes.
+      - name: Package the extension
+        run: vsce package --no-dependencies --out hronaut-vscode.vsix

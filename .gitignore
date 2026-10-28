@@ -1,0 +1,4 @@
+node_modules/
+*.vsix
+# The Hronaut app's files that CI checks the extension against.
+hronaut-app/
