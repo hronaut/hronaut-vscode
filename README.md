@@ -22,4 +22,4 @@ Hronaut runs on your computer, so a cloud-hosted agent cannot reach it. See the 
 
 ## License
 
-Hronaut and this extension are source-available under the [Subscription and Trial License](LICENSE.md). The 10-day trial starts with the first agent tool call, with no credit card required. Ongoing use requires a subscription afterward: $4/month or $24/year per named user (50% off $48).
+This extension is open source under the [MIT License](LICENSE.md): you may use, change and share it, including in paid products. Hronaut, the app it connects to, is source-available under the [Subscription and Trial License](https://github.com/hronaut/hronaut/blob/main/LICENSE). The 10-day trial starts with the first agent tool call, with no credit card required. Ongoing use of the app requires a subscription afterward: $4/month or $24/year per named user (50% off $48).
