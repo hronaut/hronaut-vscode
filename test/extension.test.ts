@@ -25,8 +25,8 @@ const extension = require('../extension.js') as {
   }
 }
 
-const STORE_DESCRIPTION = 'Connects your coding agent to Hronaut — a visible desktop browser it can drive over MCP. '
-  + 'Watch every step, pause and take over, keep logins between sessions. Requires the Hronaut app (free 10-day trial at hronaut.dev).'
+const STORE_DESCRIPTION = 'Give your coding agent its own browser. Keep yours. Connects your agent to Hronaut, a visible desktop browser for '
+  + 'coding agents, with a separate workspace for each project. Requires the Hronaut app (10-day free trial at hronaut.dev).'
 const TOKEN = 'b'.repeat(24) + '-_C7'.repeat(4)
 
 /** A checkout of the Hronaut app, whose port, profile folder and terms the extension follows. */
