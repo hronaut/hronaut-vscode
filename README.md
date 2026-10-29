@@ -1,6 +1,8 @@
 # Hronaut
 
-Connects your coding agent to [Hronaut](https://hronaut.dev) — a visible desktop browser it can drive over MCP. Watch every step, pause and take over, keep logins between sessions. Requires the Hronaut app (free 10-day trial at [hronaut.dev](https://hronaut.dev/download)).
+**Give your coding agent its own browser. Keep yours.**
+
+Connects your coding agent to [Hronaut](https://hronaut.dev), a visible desktop browser for coding agents, with a separate workspace for each project. Your everyday Chrome stays out of it, and you can pause and take over at any time. Requires the Hronaut app (10-day free trial at [hronaut.dev](https://hronaut.dev/download)).
 
 This extension adds Hronaut's MCP server to the editor, so agents such as GitHub Copilot's agent mode can use it without an `mcp.json` entry.
 
