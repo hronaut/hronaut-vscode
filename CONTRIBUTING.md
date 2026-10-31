@@ -22,4 +22,4 @@ The extension has its own version, separate from the app's.
 1. In a pull request, raise `version` in `package.json` and add a section for it to `CHANGELOG.md`.
 2. After it merges, run the **Publish** workflow from `main`. It tests and packages the extension, publishes the .vsix to the VS Code Marketplace and Open VSX, then tags the commit `v<version>` and attaches the .vsix to a GitHub release.
 
-The Marketplace trusts the workflow through the `hronaut` publisher's trusted publishing policy (repository `hronaut/hronaut-vscode`, workflow `publish.yml`, environment `extension-stores`), so it needs no token. Open VSX takes the `OVSX_PAT` secret of the `extension-stores` environment, which only `main` can use.
+Both stores trust the workflow, so it needs no tokens: the Marketplace through the `hronaut` publisher's trusted publishing policy, Open VSX through the trusted publisher of the `hronaut` namespace (in Open VSX user settings, Trusted Publishers). Both name repository `hronaut/hronaut-vscode`, workflow `publish.yml` and environment `extension-stores`, which only `main` can use.
