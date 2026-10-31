@@ -2,7 +2,7 @@
   "name": "hronaut",
   "displayName": "Hronaut",
   "description": "Give your coding agent its own browser. Keep yours. Connects your agent to Hronaut, a visible desktop browser for coding agents, with a separate workspace for each project. Requires the Hronaut app (10-day free trial at hronaut.dev).",
-  "version": "3.12.2",
+  "version": "3.12.3",
   "publisher": "hronaut",
   "license": "MIT",
   "pricing": "Trial",

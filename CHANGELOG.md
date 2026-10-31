@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.12.3
+
+- Published to Open VSX with trusted publishing, like the VS Code Marketplace, so no long-lived access token is involved. The extension itself is unchanged.
+
 ## 3.12.2
 
 - New Marketplace description and README: "Give your coding agent its own browser. Keep yours." Hronaut is a visible desktop browser for coding agents, with a separate workspace for each project. The extension itself is unchanged.
