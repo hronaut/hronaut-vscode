@@ -51,7 +51,7 @@ jobs:
 
       # vsce-sign's install script only downloads the signing tool, which packaging does not use.
       - name: Install vsce
-        run: npm install --global --ignore-scripts @vscode/vsce@4.1.0
+        run: npm install --global --ignore-scripts @vscode/vsce@4.1.1
 
       # Packaging checks the manifest and files the stores take; the Publish workflow builds the package it publishes.
       - name: Package the extension
